@@ -117,7 +117,18 @@ h2{font-family:var(--display);font-weight:800;font-size:1.5rem;line-height:1.15;
 .fb{min-height:28px;text-align:center;font-family:var(--display);font-weight:800;font-size:1.3rem}
 .fb.ok{color:var(--good)}
 .wrong{display:flex;flex-direction:column;gap:12px;align-items:center}
-.wrong p{font-family:var(--display);font-weight:800;font-size:1.4rem}
+.wrong p{font-family:var(--display);font-weight:800;font-size:1.2rem;text-align:center}
+.seg{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;background:var(--surface2);padding:5px;border-radius:16px;border:2px solid var(--line)}
+.seg button{border:0;background:none;border-radius:12px;padding:8px 2px;font-family:var(--display);font-weight:800;font-size:.85rem;display:flex;flex-direction:column;align-items:center;line-height:1.1;min-width:0}
+.seg button b{font-size:1.4rem;font-weight:800}
+.seg button.on{background:var(--accent);color:var(--accent-fg)}
+.tiles.l3{grid-template-columns:repeat(3,1fr)}
+.tile .sm{font-size:.72rem;color:var(--muted);text-align:center;padding:0 4px}
+.eq.sm{font-size:2rem}
+.q.sm{font-size:2.1rem}
+.steps{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:8px}
+.steps li{background:var(--surface2);border-radius:12px;padding:10px 12px;font-weight:700}
+.steps li:last-child{background:var(--accent);color:var(--accent-fg);font-family:var(--display);font-size:1.3rem;font-weight:800;text-align:center}
 
 .stars{display:flex;justify-content:center;gap:8px;font-size:3rem;line-height:1}
 .stars span{color:var(--line)}
@@ -171,7 +182,7 @@ h2{font-family:var(--display);font-weight:800;font-size:1.5rem;line-height:1.15;
 
 <div class="shell">
   <header class="top">
-    <h1>Karra jadvali</h1>
+    <h1 id="hd">Karra jadvali</h1>
     <div class="pills">
       <span class="pill" aria-label="Yulduzlar"><span aria-hidden="true">★</span><span id="starN">0</span></span>
       <button class="iconbtn" id="snd" data-act="snd" aria-label="Ovoz">
@@ -204,35 +215,67 @@ var TIPS={
  9:"Barmoq usuli: 9 × 4 uchun 4-barmog'ingni buk. Chapda 3, o'ngda 6 barmoq qoladi: 36. Natija raqamlari yig'indisi doim 9.",
  10:"Sonning oxiriga 0 qo'sh: 10 × 7 = 70."
 };
+var DTIP="Bo'lishni bilmasang, ko'paytirishni eslab ko'r: 42 ÷ 6 = ? degani 6 × ? = 42.";
+var LV=["Oson","O'rta","Qiyin"], LVH=[150,45,350], LVS=["x + 7 = 12","4 × x = 28","3 × x + 5 = 23"];
+var MODES=[["mul","×","Ko'paytirish"],["div","÷","Bo'lish"],["eq","x=","Tenglama"]];
+var TITLES={mul:"Karra jadvali",div:"Bo'lish jadvali",eq:"Tenglamalar"};
+var EX={
+ 1:[
+  {q:"x + 7 = 12",s:["Ikkala tomondan 7 ni ayiramiz","x + 7 − 7 = 12 − 7","x = 5"],c:"5 + 7 = 12"},
+  {q:"x − 6 = 9",s:["Ikkala tomonga 6 ni qo'shamiz","x − 6 + 6 = 9 + 6","x = 15"],c:"15 − 6 = 9"},
+  {q:"20 − x = 8",s:["x ni topish uchun 20 dan 8 ni ayiramiz","x = 20 − 8","x = 12"],c:"20 − 12 = 8"}
+ ],
+ 2:[
+  {q:"4 × x = 28",s:["Ikkala tomonni 4 ga bo'lamiz","4 × x ÷ 4 = 28 ÷ 4","x = 7"],c:"4 × 7 = 28"},
+  {q:"x ÷ 3 = 6",s:["Ikkala tomonni 3 ga ko'paytiramiz","x ÷ 3 × 3 = 6 × 3","x = 18"],c:"18 ÷ 3 = 6"},
+  {q:"9 × x = 54",s:["Ikkala tomonni 9 ga bo'lamiz","x = 54 ÷ 9","x = 6"],c:"9 × 6 = 54"}
+ ],
+ 3:[
+  {q:"3 × x + 5 = 23",s:["Avval 5 ni ayiramiz: 3 × x = 23 − 5 = 18","So'ng 3 ga bo'lamiz: x = 18 ÷ 3","x = 6"],c:"3 × 6 + 5 = 23"},
+  {q:"2 × x − 4 = 10",s:["Avval 4 ni qo'shamiz: 2 × x = 10 + 4 = 14","So'ng 2 ga bo'lamiz: x = 14 ÷ 2","x = 7"],c:"2 × 7 − 4 = 10"},
+  {q:"5 × x + 8 = 43",s:["Avval 8 ni ayiramiz: 5 × x = 43 − 8 = 35","So'ng 5 ga bo'lamiz: x = 35 ÷ 5","x = 7"],c:"5 × 7 + 8 = 43"}
+ ]
+};
 var KEY="karra-jadvali-v1";
-var S={tab:"home",n:3,stars:0,maxStreak:0,best:0,done:0,sound:true,facts:{}};
+var S={tab:"home",mode:"mul",n:3,lv:1,stars:0,maxStreak:0,bests:{mul:0,div:0,eq:0},done:0,sound:true,facts:{},eqOk:0,eqN:0,hm:"mul"};
 try{
   var raw=JSON.parse(localStorage.getItem(KEY)||"null");
   if(raw&&typeof raw==="object"){
-    ["n","stars","maxStreak","best","done","sound","facts"].forEach(function(k){if(k in raw)S[k]=raw[k]});
+    ["mode","n","lv","stars","maxStreak","done","sound","facts","eqOk","eqN"].forEach(function(k){if(k in raw)S[k]=raw[k]});
+    if(raw.bests&&typeof raw.bests==="object"){["mul","div","eq"].forEach(function(k){if(typeof raw.bests[k]==="number")S.bests[k]=raw.bests[k]})}
+    else if(typeof raw.best==="number")S.bests.mul=raw.best;
     if(typeof S.facts!=="object"||!S.facts)S.facts={};
     if(!(S.n>=0&&S.n<=10))S.n=3;
+    if(!(S.lv>=1&&S.lv<=3))S.lv=1;
+    if(["mul","div","eq"].indexOf(S.mode)<0)S.mode="mul";
   }
 }catch(e){}
-function save(){try{localStorage.setItem(KEY,JSON.stringify({n:S.n,stars:S.stars,maxStreak:S.maxStreak,best:S.best,done:S.done,sound:S.sound,facts:S.facts}))}catch(e){}}
+function save(){try{localStorage.setItem(KEY,JSON.stringify({mode:S.mode,n:S.n,lv:S.lv,stars:S.stars,maxStreak:S.maxStreak,bests:S.bests,done:S.done,sound:S.sound,facts:S.facts,eqOk:S.eqOk,eqN:S.eqN}))}catch(e){}}
 
 var app=document.getElementById("app");
-var L={m:1}, P={phase:"intro"}, G={phase:"intro"};
+var L={m:1,e:0}, P={phase:"intro"}, G={phase:"intro"};
 var AC=null;
 
 /* ---------- helpers ---------- */
-function fr(a,b){return S.facts[a+"x"+b]||{c:0,w:0,s:0}}
-function record(a,b,ok){
-  var k=a+"x"+b,r=S.facts[k]||{c:0,w:0,s:0};
+function ri(a,b){return a+Math.floor(Math.random()*(b-a+1))}
+function fkey(a,b,m){return(m==="div"?"d":"")+a+"x"+b}
+function fr(a,b,m){return S.facts[fkey(a,b,m)]||{c:0,w:0,s:0}}
+function record(a,b,ok,m){
+  var k=fkey(a,b,m),r=S.facts[k]||{c:0,w:0,s:0};
   if(ok){r.c++;r.s++}else{r.w++;r.s=0}
   S.facts[k]=r;
 }
-function mastered(a,b){return fr(a,b).s>=2}
-function tableMastered(n){var c=0;for(var b=1;b<=10;b++)if(mastered(n,b))c++;return c}
-function allMastered(){var c=0;for(var n=2;n<=10;n++)c+=tableMastered(n);return c}
+function track(q,ok){
+  if(q.mode==="eq"){S.eqN++;if(ok)S.eqOk++}
+  else record(q.a,q.b,ok,q.mode);
+}
+function mastered(a,b,m){return fr(a,b,m).s>=2}
+function tableMastered(n,m){var c=0;for(var b=1;b<=10;b++)if(mastered(n,b,m))c++;return c}
+function allMastered(m){var c=0;for(var n=2;n<=10;n++)c+=tableMastered(n,m);return c}
 function shuffle(a){a=a.slice();for(var i=a.length-1;i>0;i--){var j=Math.floor(Math.random()*(i+1));var t=a[i];a[i]=a[j];a[j]=t}return a}
 function tables(){return S.n?[S.n]:[2,3,4,5,6,7,8,9,10]}
 function level(){var s=S.stars;return s>=60?"Karra qahramoni":s>=30?"Usta":s>=10?"Hisobchi":"Yangi boshlovchi"}
+function bestOf(){return Math.max(S.bests.mul,S.bests.div,S.bests.eq)}
 function tone(f,d,type,when){
   if(!S.sound)return;
   try{
@@ -258,9 +301,15 @@ function weightedSample(pool,k){
   return out;
 }
 function factPool(){
-  var pool=[];
-  tables().forEach(function(a){for(var b=1;b<=10;b++)pool.push({a:a,b:b,w:mastered(a,b)?1:4})});
+  var pool=[],m=S.mode;
+  tables().forEach(function(a){for(var b=1;b<=10;b++)pool.push({a:a,b:b,w:mastered(a,b,m)?1:4})});
   return pool;
+}
+function distract(ans,extra){
+  var c=shuffle([ans+1,ans-1,ans+2,ans-2,ans+10,ans-10].concat(extra||[])),set=[ans],i;
+  for(i=0;i<c.length&&set.length<4;i++)if(c[i]>0&&c[i]===Math.round(c[i])&&set.indexOf(c[i])<0)set.push(c[i]);
+  var x=ans+3;while(set.length<4){if(set.indexOf(x)<0)set.push(x);x++}
+  return shuffle(set);
 }
 function options(a,b){
   var p=a*b,set=[p],c=shuffle([p+a,p-a,p+b,p-b,p+10,p-10,p+1,p-1,p+2,p-2,p+2*a]);
@@ -268,63 +317,146 @@ function options(a,b){
   var x=p+3;while(set.length<4){if(set.indexOf(x)<0)set.push(x);x++}
   return shuffle(set);
 }
-function makeQ(f){return {a:f.a,b:f.b,swap:Math.random()<.5,opts:options(f.a,f.b)}}
-function qText(q){return q.swap?q.b+" × "+q.a:q.a+" × "+q.b}
+function makeQ(f){
+  var a=f.a,b=f.b,p=a*b,sw=Math.random()<.5;
+  if(S.mode==="div"){
+    var dv=sw?b:a,qt=sw?a:b;
+    return {mode:"div",a:a,b:b,ans:qt,show:p+" ÷ "+dv+" = ?",opts:distract(qt,[a,b,qt+dv]),
+      hText:p+" ÷ "+dv+" = "+qt+"  ("+dv+" × "+qt+" = "+p+")",arr:[dv,qt]};
+  }
+  return {mode:"mul",a:a,b:b,ans:p,show:(sw?b+" × "+a:a+" × "+b)+" = ?",opts:options(a,b),
+    hText:a+" × "+b+" = "+p,arr:[a,b]};
+}
+function genEq(lv){
+  var t=ri(0,lv===3?1:(lv===1?3:2)),a,b,c,d,x,show,txt,extra;
+  if(lv===1){
+    if(t===0){x=ri(2,60);a=ri(2,40);b=x+a;show="x + "+a+" = "+b;txt="x = "+b+" − "+a+" = "+x;extra=[b+a]}
+    else if(t===1){b=ri(2,50);a=ri(2,40);x=b+a;show="x − "+a+" = "+b;txt="x = "+b+" + "+a+" = "+x;extra=[b>a?b-a:b+2*a]}
+    else if(t===2){x=ri(2,60);a=ri(2,40);b=x+a;show=a+" + x = "+b;txt="x = "+b+" − "+a+" = "+x;extra=[b+a]}
+    else{a=ri(10,99);x=ri(1,a-1);b=a-x;show=a+" − x = "+b;txt="x = "+a+" − "+b+" = "+x;extra=[a+b]}
+  }else if(lv===2){
+    if(t===1){a=ri(2,9);b=ri(1,10);x=a*b;show="x ÷ "+a+" = "+b;txt="x = "+b+" × "+a+" = "+x;extra=[b+a,x+a,x-a]}
+    else{a=ri(2,9);x=ri(1,10);b=a*x;show=(t===0?a+" × x":"x × "+a)+" = "+b;txt="x = "+b+" ÷ "+a+" = "+x;extra=[a+b,b-a]}
+  }else{
+    a=ri(2,9);
+    if(t===0){x=ri(1,10);b=ri(1,30);c=a*x+b;d=c-b;show=a+" × x + "+b+" = "+c;txt="1) "+c+" − "+b+" = "+d+"; 2) x = "+d+" ÷ "+a+" = "+x;extra=[d]}
+    else{x=ri(2,10);b=ri(1,Math.min(30,a*x-1));c=a*x-b;d=c+b;show=a+" × x − "+b+" = "+c;txt="1) "+c+" + "+b+" = "+d+"; 2) x = "+d+" ÷ "+a+" = "+x;extra=[d]}
+  }
+  return {mode:"eq",ans:x,show:show,opts:distract(x,extra),hText:txt+". Tekshirish: "+show.replace("x",x),arr:null};
+}
+function newQs(k){
+  var out=[];
+  if(S.mode==="eq"){
+    var seen={},tries=0,q;
+    while(out.length<k&&tries<300){q=genEq(S.lv);tries++;if(seen[q.show])continue;seen[q.show]=1;out.push(q)}
+    while(out.length<k)out.push(genEq(S.lv));
+    return out;
+  }
+  var f=weightedSample(factPool(),k);
+  while(f.length<k)f.push(f[Math.floor(Math.random()*f.length)]);
+  return f.map(makeQ);
+}
+function qHTML(q){
+  var eq=q.mode==="eq";
+  return '<div class="q'+(eq?" sm":"")+'">'+q.show+'</div>'+(eq?'<p class="say">x nechaga teng?</p>':"");
+}
 function arrayHTML(a,b,d){
   var g="";
   for(var i=0;i<b;i++){g+='<div class="grp g'+(i%2)+'">'+'<i class="dot"></i>'.repeat(a)+"</div>"}
   return '<div class="arr" style="--h:'+H[a]+';--d:'+d+'px" role="img" aria-label="'+b+' ta guruh, har birida '+a+' ta">'+g+"</div>";
+}
+function modes(){
+  var h='<div class="seg" role="group" aria-label="Amal turi">';
+  MODES.forEach(function(m){h+='<button class="'+(S.mode===m[0]?"on":"")+'" data-act="mode" data-md="'+m[0]+'"><b>'+m[1]+'</b>'+m[2]+"</button>"});
+  return h+"</div>";
 }
 function chips(){
   var h='<div class="chips" role="group" aria-label="Jadval tanlash">';
   for(var n=2;n<=10;n++)h+='<button class="chip'+(S.n===n?" on":"")+'" data-act="pick" data-n="'+n+'">'+n+"×</button>";
   return h+'<button class="chip'+(S.n===0?" on":"")+'" data-act="pick" data-n="0">Aralash</button></div>';
 }
+function lvChips(){
+  var h='<div class="chips" role="group" aria-label="Daraja">';
+  for(var i=1;i<=3;i++)h+='<button class="chip'+(S.lv===i?" on":"")+'" data-act="lv" data-lv="'+i+'">'+LV[i-1]+"</button>";
+  return h+"</div>";
+}
+function picker(){return S.mode==="eq"?lvChips():chips()}
+function chosen(){return S.mode==="eq"?"daraja: "+LV[S.lv-1]+" ("+LVS[S.lv-1]+")":(S.n?S.n+" × jadvali":"aralash jadvallar")}
 function stopAll(){clearTimeout(P.t);clearInterval(G.iv);clearTimeout(G.t)}
 
 /* ---------- screens ---------- */
 function home(){
-  var h='<div class="sec"><div><h2>Bugun qaysi jadvalni o\'rganamiz?</h2><p class="sub">Daraja: '+level()+"</p></div>";
-  h+='<div class="tiles">';
-  for(var n=2;n<=10;n++){
-    h+='<button class="tile'+(S.n===n?" on":"")+'" data-act="pick" data-n="'+n+'" style="--h:'+H[n]+'"><span class="tn">'+n+'×</span><span class="tbar"><i style="width:'+tableMastered(n)*10+'%"></i></span></button>';
+  var md=S.mode,h='<div class="sec">'+modes()+'<div><h2>'+(md==="eq"?"Qaysi darajani mashq qilamiz?":"Bugun qaysi jadvalni o'rganamiz?")+'</h2><p class="sub">Daraja: '+level()+"</p></div>";
+  if(md==="eq"){
+    h+='<div class="tiles l3">';
+    for(var i=1;i<=3;i++)h+='<button class="tile'+(S.lv===i?" on":"")+'" data-act="lv" data-lv="'+i+'" style="--h:'+LVH[i-1]+'"><span class="tn">'+LV[i-1]+'</span><span class="sm">'+LVS[i-1]+"</span></button>";
+    h+="</div>";
+  }else{
+    h+='<div class="tiles">';
+    for(var n=2;n<=10;n++){
+      h+='<button class="tile'+(S.n===n?" on":"")+'" data-act="pick" data-n="'+n+'" style="--h:'+H[n]+'"><span class="tn">'+n+'×</span><span class="tbar"><i style="width:'+tableMastered(n,md)*10+'%"></i></span></button>';
+    }
+    h+='<button class="tile all'+(S.n===0?" on":"")+'" data-act="pick" data-n="0"><span class="tn">Aralash</span><span class="tbar"><i style="width:'+Math.round(allMastered(md)/90*100)+'%"></i></span></button></div>';
   }
-  h+='<button class="tile all'+(S.n===0?" on":"")+'" data-act="pick" data-n="0"><span class="tn">Aralash</span><span class="tbar"><i style="width:'+Math.round(allMastered()/90*100)+'%"></i></span></button></div>';
   h+='<div class="acts">'+
-   '<button class="act main" data-act="tab" data-t="learn"><b>O\'rganish</b><span>Rasmlar bilan ko\'r va yodla</span></button>'+
+   '<button class="act main" data-act="tab" data-t="learn"><b>O\'rganish</b><span>'+(md==="eq"?"Yechimni qadam-baqadam ko'r":"Rasmlar bilan ko'r va yodla")+'</span></button>'+
    '<button class="act" data-act="tab" data-t="practice"><b>Mashq</b><span>10 ta savol, yulduz yig\'</span></button>'+
    '<button class="act" data-act="tab" data-t="game"><b>Shar portlatish</b><span>45 soniyada eng ko\'p ball ol</span></button></div>';
-  var weak=[];
-  for(var k in S.facts){var r=S.facts[k];if(r.w>0&&r.s<2){var p=k.split("x");weak.push({a:+p[0],b:+p[1],d:r.w-r.c})}}
-  weak.sort(function(x,y){return y.d-x.d});
-  if(weak.length){
-    h+='<div class="card"><p class="label" style="margin-bottom:8px">Qaytadan ko\'r</p><div class="weak">'+
-      weak.slice(0,6).map(function(w){return"<span>"+w.a+" × "+w.b+"</span>"}).join("")+"</div></div>";
+  if(md==="eq"){
+    if(S.eqN>0)h+='<div class="card"><p class="label" style="margin-bottom:6px">Tenglamalar</p><p>To\'g\'ri yechilgan: <b>'+S.eqOk+' / '+S.eqN+'</b></p></div>';
+  }else{
+    var weak=[];
+    for(var k in S.facts){
+      var r=S.facts[k],isD=k.charAt(0)==="d";
+      if(isD!==(md==="div"))continue;
+      if(r.w>0&&r.s<2){var p=(isD?k.slice(1):k).split("x");weak.push({a:+p[0],b:+p[1],d:r.w-r.c})}
+    }
+    weak.sort(function(x,y){return y.d-x.d});
+    if(weak.length){
+      h+='<div class="card"><p class="label" style="margin-bottom:8px">Qaytadan ko\'r</p><div class="weak">'+
+        weak.slice(0,6).map(function(w){return"<span>"+(md==="div"?(w.a*w.b)+" ÷ "+w.a:w.a+" × "+w.b)+"</span>"}).join("")+"</div></div>";
+    }
   }
   app.innerHTML=h+"</div>";
 }
 
 function learn(){
-  var n=S.n||2,m=L.m,p=n*m;
-  var h='<div class="sec"><div><h2>O\'rganish</h2><p class="sub">Jadvalni tanla va misollarni birma-bir ko\'r</p></div>'+chips();
-  h+='<div class="card sec"><div class="eq">'+n+' × '+m+' = <em>'+p+'</em></div>'+
-    arrayHTML(n,m,n>=8?18:22)+
-    '<p class="say">'+m+' ta guruh, har birida '+n+' ta: jami '+p+'</p>'+
-    '<div class="skip" aria-label="Sakrab sanash">';
-  for(var i=1;i<=10;i++)h+='<span class="'+(i<=m?"on":"")+'">'+n*i+"</span>";
-  h+='</div><p class="say">Joyini almashtirsang ham natija bir xil: '+m+' × '+n+' = '+p+'</p>'+
-    '<div class="row"><button class="btn ghost" data-act="prev"'+(m<=1?" disabled":"")+'>Oldingi</button><button class="btn" data-act="next"'+(m>=10?" disabled":"")+'>Keyingi</button></div></div>';
-  h+='<div class="tip"><b>Hiyla:</b> '+TIPS[n]+"</div>";
+  var h='<div class="sec">';
+  if(S.mode==="eq"){
+    var list=EX[S.lv],e=Math.min(L.e,list.length-1),ex=list[e];
+    h+='<div><h2>Tenglamani yechish</h2><p class="sub">Tenglama muvozanatdagi tarozi kabi. Bir tomonda nima qilsak, ikkinchi tomonda ham shuni qilamiz.</p></div>'+modes()+lvChips();
+    h+='<div class="card sec"><div class="eq sm">'+ex.q+'</div><ul class="steps">';
+    ex.s.forEach(function(s){h+="<li>"+s+"</li>"});
+    h+='</ul><p class="say">Tekshirish: '+ex.c+'</p>'+
+      '<div class="row"><button class="btn ghost" data-act="eprev"'+(e<=0?" disabled":"")+'>Oldingi</button><button class="btn" data-act="enext"'+(e>=list.length-1?" disabled":"")+'>Keyingi</button></div></div>'+
+      '<button class="btn" data-act="tab" data-t="practice">Mashq qilaman</button></div>';
+    app.innerHTML=h;
+    return;
+  }
+  var dv=S.mode==="div",n=S.n||2,m=L.m,p=n*m;
+  h+='<div><h2>'+(dv?"Bo'lishni o'rganish":"O'rganish")+'</h2><p class="sub">'+(dv?"Bo'lish ko'paytirishning teskarisi":"Jadvalni tanla va misollarni birma-bir ko'r")+'</p></div>'+modes()+chips();
+  h+='<div class="card sec"><div class="eq">'+(dv?p+' ÷ '+n+' = <em>'+m+'</em>':n+' × '+m+' = <em>'+p+'</em>')+'</div>'+
+    arrayHTML(n,m,n>=8?18:22);
+  if(dv){
+    h+='<p class="say">'+p+' ta narsani '+n+' tadan guruhlasak, '+m+' ta guruh chiqadi</p>'+
+      '<p class="say">'+n+' × '+m+' = '+p+' · '+m+' × '+n+' = '+p+'<br>'+p+' ÷ '+n+' = '+m+' · '+p+' ÷ '+m+' = '+n+'</p>';
+  }else{
+    h+='<p class="say">'+m+' ta guruh, har birida '+n+' ta: jami '+p+'</p><div class="skip" aria-label="Sakrab sanash">';
+    for(var i=1;i<=10;i++)h+='<span class="'+(i<=m?"on":"")+'">'+n*i+"</span>";
+    h+='</div><p class="say">Joyini almashtirsang ham natija bir xil: '+m+' × '+n+' = '+p+'</p>';
+  }
+  h+='<div class="row"><button class="btn ghost" data-act="prev"'+(m<=1?" disabled":"")+'>Oldingi</button><button class="btn" data-act="next"'+(m>=10?" disabled":"")+'>Keyingi</button></div></div>';
+  h+='<div class="tip"><b>Hiyla:</b> '+(dv?DTIP:TIPS[n])+"</div>";
   h+='<div class="list">';
-  for(var j=1;j<=10;j++)h+='<button class="li'+(j===m?" on":"")+'" data-act="m" data-m="'+j+'">'+n+" × "+j+" = "+n*j+"</button>";
+  for(var j=1;j<=10;j++)h+='<button class="li'+(j===m?" on":"")+'" data-act="m" data-m="'+j+'">'+(dv?n*j+" ÷ "+n+" = "+j:n+" × "+j+" = "+n*j)+"</button>";
   h+='</div><button class="btn" data-act="tab" data-t="practice">Mashq qilaman</button></div>';
   app.innerHTML=h;
 }
 
 function practice(){
   if(P.phase==="intro"){
-    app.innerHTML='<div class="sec"><div><h2>Mashq</h2><p class="sub">10 ta savol. 9 ta to\'g\'ri javob bersang, 3 yulduz olasan.</p></div>'+chips()+
-      '<div class="card"><p class="say">Tanlangan: <b>'+(S.n?S.n+" × jadvali":"aralash jadvallar")+'</b>. Noto\'g\'ri javobdan keyin rasm yordam beradi.</p></div>'+
+    app.innerHTML='<div class="sec"><div><h2>Mashq</h2><p class="sub">10 ta savol. 9 ta to\'g\'ri javob bersang, 3 yulduz olasan.</p></div>'+modes()+picker()+
+      '<div class="card"><p class="say">Tanlangan: <b>'+chosen()+'</b>. Noto\'g\'ri javobdan keyin yechim ko\'rsatiladi.</p></div>'+
       '<button class="btn" data-act="startp">Boshlash</button></div>';
     return;
   }
@@ -338,21 +470,19 @@ function practice(){
   var q=P.q[P.i];
   var h='<div class="sec"><div class="prog"><i style="width:'+P.i*10+'%"></i></div>'+
     '<div class="meta"><span>Savol '+(P.i+1)+' / 10</span><span>To\'g\'ri: '+P.ok+'</span></div>'+
-    '<div class="card"><div class="q">'+qText(q)+' = ?</div></div><div class="opts">';
+    '<div class="card">'+qHTML(q)+'</div><div class="opts">';
   q.opts.forEach(function(o){h+='<button class="opt" data-act="ans" data-v="'+o+'">'+o+"</button>"});
   app.innerHTML=h+'</div><div class="fb" id="fb" aria-live="polite"></div></div>';
 }
 function startPractice(){
   stopAll();
-  var f=weightedSample(factPool(),10);
-  if(f.length<10){while(f.length<10)f.push(f[Math.floor(Math.random()*f.length)])}
-  P={phase:"run",q:f.map(makeQ),i:0,ok:0,lock:false,streak:0};
+  P={phase:"run",q:newQs(10),i:0,ok:0,lock:false,streak:0};
   render();
 }
 function answer(v,btn){
   if(P.lock)return;P.lock=true;
-  var q=P.q[P.i],p=q.a*q.b,ok=v===p;
-  record(q.a,q.b,ok);
+  var q=P.q[P.i],p=q.ans,ok=v===p;
+  track(q,ok);
   var bs=app.querySelectorAll(".opt");
   for(var i=0;i<bs.length;i++){
     bs[i].disabled=true;
@@ -368,7 +498,7 @@ function answer(v,btn){
   }else{
     P.streak=0;btn.classList.add("bad");sBad();
     fb.className="fb";
-    fb.innerHTML='<div class="wrong"><p>'+q.a+' × '+q.b+' = '+p+'</p>'+arrayHTML(q.a,q.b,q.a>=8?12:14)+'<button class="btn" data-act="nextq">Keyingisi</button></div>';
+    fb.innerHTML='<div class="wrong"><p>'+q.hText+'</p>'+(q.arr?arrayHTML(q.arr[0],q.arr[1],q.arr[0]>=8?12:14):"")+'<button class="btn" data-act="nextq">Keyingisi</button></div>';
   }
   save();
 }
@@ -385,18 +515,18 @@ function nextQ(){
 
 function game(){
   if(G.phase==="intro"){
-    app.innerHTML='<div class="sec"><div><h2>Shar portlatish</h2><p class="sub">Savolga to\'g\'ri javob yozilgan sharni bos. Ketma-ket to\'g\'ri javoblar ko\'proq ball beradi.</p></div>'+chips()+
-      '<div class="card"><p class="say">Eng yaxshi natija: <b>'+S.best+' ball</b></p></div><button class="btn" data-act="startg">Boshlash</button></div>';
+    app.innerHTML='<div class="sec"><div><h2>Shar portlatish</h2><p class="sub">Savolga to\'g\'ri javob yozilgan sharni bos. Ketma-ket to\'g\'ri javoblar ko\'proq ball beradi.</p></div>'+modes()+picker()+
+      '<div class="card"><p class="say">Eng yaxshi natija: <b>'+S.bests[S.mode]+' ball</b></p></div><button class="btn" data-act="startg">Boshlash</button></div>';
     return;
   }
   if(G.phase==="end"){
-    app.innerHTML='<div class="sec"><h2>Vaqt tugadi</h2><div class="card sec"><div class="big">'+G.score+'</div><p class="say">ball. To\'g\'ri javoblar: '+G.hits+(G.score>=S.best&&G.score>0?". Yangi rekord!":"")+'</p>'+
+    app.innerHTML='<div class="sec"><h2>Vaqt tugadi</h2><div class="card sec"><div class="big">'+G.score+'</div><p class="say">ball. To\'g\'ri javoblar: '+G.hits+(G.score>=S.bests[S.mode]&&G.score>0?". Yangi rekord!":"")+'</p>'+
       '<div class="stars" aria-label="'+G.earned+' yulduz">'+[1,2,3].map(function(i){return'<span class="'+(i<=G.earned?"on":"")+'">★</span>'}).join("")+'</div>'+
       '<p class="say">Har 60 ball uchun 1 yulduz (eng ko\'pi bilan 3).</p></div><div class="row"><button class="btn" data-act="startg">Yana o\'yna</button><button class="btn ghost" data-act="tab" data-t="learn">O\'rganish</button></div></div>';
     return;
   }
   app.innerHTML='<div class="sec"><div class="hud"><span>Ball: <span id="gs">0</span></span><span id="gc"></span></div><div class="time"><i id="gt"></i></div>'+
-    '<div class="card"><div class="q" id="gq"></div></div><div class="balloons" id="gb"></div></div>';
+    '<div class="card" id="gq"></div><div class="balloons" id="gb"></div></div>';
   gNext();gHud();
 }
 function gHud(){
@@ -405,14 +535,15 @@ function gHud(){
   if(c)c.textContent=G.combo>=2?"Seriya ×"+G.combo:"";
 }
 function gNext(){
-  var f=weightedSample(factPool(),1)[0];
-  G.cur=makeQ(f);G.lock=false;
+  var q=newQs(1)[0],t=0;
+  while(G.cur&&q.show===G.cur.show&&t<6){q=newQs(1)[0];t++}
+  G.cur=q;G.lock=false;
   var hues=[350,210,150,45],h="";
-  G.cur.opts.forEach(function(o,i){
+  q.opts.forEach(function(o,i){
     h+='<button class="balloon" style="--h:'+hues[i]+';--dl:'+(i*.45)+'s" data-act="gans" data-v="'+o+'">'+o+"</button>";
   });
-  var q=document.getElementById("gq"),b=document.getElementById("gb");
-  if(q)q.textContent=qText(G.cur)+" = ?";
+  var qe=document.getElementById("gq"),b=document.getElementById("gb");
+  if(qe)qe.innerHTML=qHTML(q);
   if(b)b.innerHTML=h;
 }
 function startGame(){
@@ -429,15 +560,15 @@ function endGame(){
   clearInterval(G.iv);clearTimeout(G.t);
   G.earned=Math.min(3,Math.floor(G.score/60));
   S.stars+=G.earned;
-  if(G.score>S.best)S.best=G.score;
+  if(G.score>S.bests[S.mode])S.bests[S.mode]=G.score;
   G.phase="end";save();
   if(G.earned)sWin();
   render();
 }
 function gAnswer(v,btn){
   if(G.lock)return;
-  var q=G.cur,p=q.a*q.b,ok=v===p;
-  record(q.a,q.b,ok);
+  var q=G.cur,ok=v===q.ans;
+  track(q,ok);
   if(ok){
     G.lock=true;
     G.score+=10+Math.min(G.combo,5)*2;G.combo++;G.hits++;
@@ -451,23 +582,28 @@ function gAnswer(v,btn){
 }
 
 function progress(){
-  var h='<div class="sec"><div><h2>Yutuqlar</h2><p class="sub">'+level()+' · '+S.stars+' yulduz · '+allMastered()+' / 90 misol yodlangan</p></div>';
-  h+='<div class="card sec"><p class="label">Hamma misollar</p><div class="heat"><span></span>';
+  var hm=S.hm==="div"?"div":"mul";
+  var h='<div class="sec"><div><h2>Yutuqlar</h2><p class="sub">'+level()+' · '+S.stars+' yulduz</p><p class="sub">Yodlangan: ko\'paytirish '+allMastered("mul")+' / 90 · bo\'lish '+allMastered("div")+' / 90</p></div>';
+  h+='<div class="card sec"><div class="chips" role="group" aria-label="Jadval turi"><button class="chip'+(hm==="mul"?" on":"")+'" data-act="hm" data-m="mul">Ko\'paytirish</button><button class="chip'+(hm==="div"?" on":"")+'" data-act="hm" data-m="div">Bo\'lish</button></div>'+
+    '<div class="heat"><span></span>';
   for(var b=1;b<=10;b++)h+='<span class="h">'+b+"</span>";
   for(var a=2;a<=10;a++){
-    h+='<span class="r">'+a+"×</span>";
+    h+='<span class="r">'+a+(hm==="div"?"÷":"×")+"</span>";
     for(b=1;b<=10;b++){
-      var r=fr(a,b),cl=mastered(a,b)?"m":(r.w>r.c?"x":(r.c+r.w>0?"s":""));
+      var r=fr(a,b,hm),cl=mastered(a,b,hm)?"m":(r.w>r.c?"x":(r.c+r.w>0?"s":""));
       h+='<span class="c '+cl+'">'+a*b+"</span>";
     }
   }
   h+='</div><div class="legend"><span><i style="background:var(--good)"></i>Yodlangan</span><span><i style="background:var(--sun)"></i>Mashq qilinmoqda</span><span><i style="background:var(--bad)"></i>Xato ko\'p</span></div>'+
-    '<p class="sub" style="margin:0">Yodlangan: ketma-ket ikki marta to\'g\'ri javob.</p></div>';
+    '<p class="sub" style="margin:0">Yodlangan: ketma-ket ikki marta to\'g\'ri javob.'+(hm==="div"?" Qator: bo'luvchi, ustun: javob, katak: bo'linuvchi son.":"")+'</p></div>';
+  h+='<div class="card"><p class="label" style="margin-bottom:6px">Tenglamalar</p><p>To\'g\'ri yechilgan: <b>'+S.eqOk+' / '+S.eqN+'</b></p></div>';
   var B=[
     {t:"Birinchi qadam",d:"Birinchi mashqni tugat",ok:S.done>=1},
     {t:"Zo'r seriya",d:"Ketma-ket 5 ta to'g'ri javob ber",ok:S.maxStreak>=5},
-    {t:"Jadval ustasi",d:"Bitta jadvalning 10 ta misolini ham yodla",ok:[2,3,4,5,6,7,8,9,10].some(function(n){return tableMastered(n)===10})},
-    {t:"Tezkor",d:"O'yinda 100 ball to'pla",ok:S.best>=100},
+    {t:"Jadval ustasi",d:"Bitta karra jadvalining 10 ta misolini ham yodla",ok:[2,3,4,5,6,7,8,9,10].some(function(n){return tableMastered(n,"mul")===10})},
+    {t:"Bo'lish ustasi",d:"Bitta bo'lish jadvalining 10 ta misolini ham yodla",ok:[2,3,4,5,6,7,8,9,10].some(function(n){return tableMastered(n,"div")===10})},
+    {t:"Tenglama ustasi",d:"10 ta tenglamani to'g'ri yech",ok:S.eqOk>=10},
+    {t:"Tezkor",d:"O'yinda 100 ball to'pla",ok:bestOf()>=100},
     {t:"50 yulduz",d:"50 ta yulduz yig'",ok:S.stars>=50}
   ];
   h+='<div class="sec"><p class="label">Nishonlar</p>';
@@ -481,6 +617,7 @@ function progress(){
 /* ---------- shell ---------- */
 function render(){
   document.getElementById("starN").textContent=S.stars;
+  document.getElementById("hd").textContent=TITLES[S.mode];
   var snd=document.getElementById("snd");
   snd.classList.toggle("off",!S.sound);
   snd.setAttribute("aria-pressed",String(S.sound));
@@ -492,7 +629,6 @@ function go(t){
   stopAll();S.tab=t;S.resetAsk=false;
   if(t==="practice")P={phase:"intro"};
   if(t==="game")G={phase:"intro"};
-  if(t==="learn")L.m=Math.min(L.m,10);
   render();window.scrollTo(0,0);
 }
 document.addEventListener("click",function(e){
@@ -500,10 +636,15 @@ document.addEventListener("click",function(e){
   if(!el||el.disabled)return;
   var a=el.getAttribute("data-act");
   if(a==="tab")go(el.getAttribute("data-t"));
+  else if(a==="mode"){stopAll();S.mode=el.getAttribute("data-md");L={m:1,e:0};P={phase:"intro"};G={phase:"intro"};save();render()}
   else if(a==="pick"){S.n=+el.getAttribute("data-n");save();render()}
+  else if(a==="lv"){S.lv=+el.getAttribute("data-lv");L.e=0;save();render()}
+  else if(a==="hm"){S.hm=el.getAttribute("data-m");render()}
   else if(a==="m"){L.m=+el.getAttribute("data-m");render()}
   else if(a==="prev"){if(L.m>1){L.m--;render()}}
   else if(a==="next"){if(L.m<10){L.m++;render()}}
+  else if(a==="eprev"){if(L.e>0){L.e--;render()}}
+  else if(a==="enext"){if(L.e<2){L.e++;render()}}
   else if(a==="startp")startPractice();
   else if(a==="ans")answer(+el.getAttribute("data-v"),el);
   else if(a==="nextq")nextQ();
@@ -512,7 +653,7 @@ document.addEventListener("click",function(e){
   else if(a==="snd"){S.sound=!S.sound;save();render();if(S.sound)sGood()}
   else if(a==="reset"){S.resetAsk=true;render()}
   else if(a==="resetno"){S.resetAsk=false;render()}
-  else if(a==="resetyes"){S.facts={};S.stars=0;S.maxStreak=0;S.best=0;S.done=0;S.resetAsk=false;save();render()}
+  else if(a==="resetyes"){S.facts={};S.stars=0;S.maxStreak=0;S.bests={mul:0,div:0,eq:0};S.done=0;S.eqOk=0;S.eqN=0;S.resetAsk=false;save();render()}
 });
 render();
 })();
